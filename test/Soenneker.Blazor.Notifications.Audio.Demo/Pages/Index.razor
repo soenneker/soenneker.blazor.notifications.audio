@@ -1,0 +1,117 @@
+@page "/"
+@using System
+@using System.Threading.Tasks
+@using Soenneker.Blazor.Notifications.Audio.Abstract
+@using Soenneker.Blazor.Notifications.Audio.Enums
+@using Soenneker.Blazor.Notifications.Audio.Options
+@inject INotificationAudio Audio
+
+<PageTitle>Notification audio playground</PageTitle>
+
+<main class="audio-demo">
+    <h1>Notification audio playground</h1>
+    <p>Preview twelve built-in sounds, bring your own audio, or compose a tone. Initialize once after render, then interact with the page to enable browser audio.</p>
+    <button @onclick="Enable">Enable audio</button>
+    <p role="status" aria-live="polite">@_status</p>
+
+    <section>
+        <h2>Built-in sounds</h2>
+        <div class="preset-grid">
+            @foreach (NotificationSound sound in NotificationSound.List)
+            {
+                <button @onclick="() => Run(async () => _id = await Audio.Play(sound, Settings()))">@sound.Name</button>
+            }
+        </div>
+    </section>
+
+    <section>
+        <h2>Playback settings</h2>
+        <label>Volume (0–1) <input type="number" min="0" max="1" step="0.05" @bind="_volume" /></label>
+        <label>Pan (left −1, right 1) <input type="number" min="-1" max="1" step="0.1" @bind="_pan" /></label>
+        <label>Speed (0.25–4; also changes pitch) <input type="number" min="0.25" max="4" step="0.25" @bind="_rate" /></label>
+        <label>Fade in (seconds) <input type="number" min="0" max="30" step="0.05" @bind="_fade" /></label>
+        <label><input type="checkbox" @bind="_loop" /> Loop until stopped</label>
+        <button @onclick="Apply">Apply volume, pan and speed to latest sound</button>
+        <label>Master volume <input type="number" min="0" max="1" step="0.05" @bind="_master" /></label>
+        <button @onclick="() => Run(async () => await Audio.SetMasterVolume(_master))">Set master volume</button>
+        <button @onclick="Mute">@(_muted ? "Unmute all" : "Mute all")</button>
+    </section>
+
+    <section>
+        <h2>Custom audio</h2>
+        <p>Use a relative asset path, data/blob URL, or an HTTPS audio URL that permits CORS. The browser must support its format.</p>
+        <label>Audio URL <input type="text" @bind="_url" placeholder="sounds/my-notification.mp3" /></label>
+        <button @onclick="() => Run(async () => await Audio.Preload(_url))">Preload</button>
+        <button @onclick="() => Run(async () => _id = await Audio.PlayUrl(_url, Settings()))">Play URL</button>
+        <button @onclick="Register">Register as “custom”</button>
+        <button @onclick="PlayRegistered">Play registered</button>
+    </section>
+
+    <section>
+        <h2>Compose a tone</h2>
+        <label>Frequency (Hz) <input type="number" min="20" max="20000" @bind="_frequency" /></label>
+        <label>Ending frequency (Hz) <input type="number" min="20" max="20000" @bind="_endFrequency" /></label>
+        <label>Duration (seconds) <input type="number" min="0.1" max="30" step="0.1" @bind="_duration" /></label>
+        <label>Waveform <select @bind="_waveform">@foreach (AudioWaveform wave in AudioWaveform.List) { <option value="@wave.Value">@wave.Name</option> }</select></label>
+        <button @onclick="Compose">Play custom tone</button>
+        <p>The API accepts up to 128 tones with independent start times, envelopes, waveforms and pitch sweeps. Overlap tones to make chords.</p>
+    </section>
+
+    <section>
+        <h2>Latest playback</h2>
+        <p>@(_id ?? "No playback yet")</p>
+        <button disabled="@(_id is null)" @onclick="() => Run(async () => { await Audio.Pause(_id!); })">Pause</button>
+        <button disabled="@(_id is null)" @onclick="() => Run(async () => { await Audio.Resume(_id!); })">Resume</button>
+        <button disabled="@(_id is null)" @onclick="() => Run(async () => { await Audio.Stop(_id!, 0.25); })">Fade out</button>
+        <label>Seek position (seconds) <input type="number" min="0" step="0.1" @bind="_seek" /></label>
+        <button disabled="@(_id is null)" @onclick="() => Run(async () => { await Audio.Seek(_id!, _seek); })">Seek</button>
+        <button disabled="@(_id is null)" @onclick="State">Inspect state</button>
+        <button @onclick="() => Run(async () => await Audio.StopAll())">Stop all</button>
+        <button @onclick="() => Run(async () => await Audio.ClearCache())">Clear cache</button>
+    </section>
+</main>
+
+<style>
+    .audio-demo { max-width: 960px; margin: 2rem auto; padding: 1rem; font-family: system-ui, sans-serif; }
+    .audio-demo h1 { font-size: 2rem; } .audio-demo h2 { font-size: 1.3rem; margin-bottom: .75rem; }
+    .audio-demo p { margin: .75rem 0; } .audio-demo section { border-top: 1px solid #aaa6; margin-top: 1.5rem; padding-top: 1rem; }
+    .audio-demo label { display: block; margin: .6rem 0; } .audio-demo input, .audio-demo select { border: 1px solid #aaa; padding: .3rem; border-radius: .25rem; }
+    .audio-demo button { border: 1px solid #777; padding: .5rem .8rem; margin: .2rem; border-radius: .3rem; cursor: pointer; }
+    .audio-demo button:disabled { opacity: .4; } .preset-grid { display: flex; flex-wrap: wrap; gap: .4rem; }
+</style>
+
+@code {
+    private string _status = "Initializing…", _url = "";
+    private string? _id;
+    private double _volume = 0.7, _pan, _rate = 1, _fade, _master = 1, _frequency = 880, _endFrequency = 440, _duration = 0.5, _seek;
+    private bool _loop, _muted;
+    private int _waveform;
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (!firstRender) return;
+        await Run(async () => await Audio.Initialize());
+        StateHasChanged();
+    }
+    private AudioPlaybackOptions Settings() => new() { Volume = _volume, Pan = _pan, PlaybackRate = _rate, Loop = _loop, FadeIn = _fade };
+    private async Task Run(Func<Task> action)
+    {
+        try { await action(); _status = "Ready. Use Inspect state for playback details."; }
+        catch (Exception ex) { _status = ex.Message; }
+    }
+    private async Task Enable()
+    {
+        try { _status = await Audio.Unlock() ? "Audio enabled." : "Interact with the page, then try again."; }
+        catch (Exception ex) { _status = ex.Message; }
+    }
+    private Task Compose() => Run(async () => _id = await Audio.PlayTones(new[] { new AudioTone { Frequency = _frequency, EndFrequency = _endFrequency, Duration = _duration, Waveform = AudioWaveform.FromValue(_waveform) } }, Settings()));
+    private Task PlayRegistered() => Run(async () => _id = await Audio.PlayRegistered("custom", Settings()));
+    private Task Register() => Run(async () => await Audio.RegisterUrl("custom", _url));
+    private Task Mute() => Run(async () => { _muted = !_muted; await Audio.SetMuted(_muted); });
+    private Task Apply() => Run(async () => { if (_id is null) return; await Audio.SetVolume(_id, _volume, .05); await Audio.SetPan(_id, _pan); await Audio.SetPlaybackRate(_id, _rate); });
+    private async Task State()
+    {
+        try { var state = await Audio.GetState(_id!); _status = state is null ? "Playback ended or was stopped." : $"{state.Status}: {state.Position:F2} / {state.Duration:F2}s, volume {state.Volume:F2}, speed {state.PlaybackRate:F2}"; }
+        catch (Exception ex) { _status = ex.Message; }
+    }
+}

@@ -1,0 +1,52 @@
+name: build-and-test
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event.pull_request.number }}
+  cancel-in-progress: true
+
+on:
+  pull_request:
+    branches:
+      - main
+  workflow_dispatch:
+
+env:
+  PipelineEnvironment: true
+  NUGET_XMLDOC_MODE: skip
+
+jobs:
+  build-and-test:
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v6
+        with:
+          dotnet-version: 11.0.100
+
+      - name: Setup Node
+        uses: actions/setup-node@v7
+        with:
+          node-version: '24'
+
+      - name: Test audio engine
+        run: node --test --test-timeout=10000 test/audiointerop.test.mjs
+
+      - name: Restore tests
+        run: dotnet restore test/Soenneker.Blazor.Notifications.Audio.Tests/Soenneker.Blazor.Notifications.Audio.Tests.csproj --verbosity minimal
+
+      - name: Build tests
+        run: dotnet build test/Soenneker.Blazor.Notifications.Audio.Tests/Soenneker.Blazor.Notifications.Audio.Tests.csproj --configuration Release --no-restore --verbosity minimal
+
+      - name: Test
+        run: dotnet test --project test/Soenneker.Blazor.Notifications.Audio.Tests/Soenneker.Blazor.Notifications.Audio.Tests.csproj --configuration Release --no-build --no-restore --verbosity minimal
+
+      - name: Pack
+        run: dotnet pack src/Soenneker.Blazor.Notifications.Audio/Soenneker.Blazor.Notifications.Audio.csproj --configuration Release --no-build --no-restore --output . --verbosity minimal
