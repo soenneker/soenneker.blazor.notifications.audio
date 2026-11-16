@@ -30,4 +30,6 @@ public sealed partial class NotificationSound
     public static readonly NotificationSound Ascending = new(10);
     /// <summary>Four descending notes.</summary>
     public static readonly NotificationSound Descending = new(11);
+    /// <summary>A warm four-note incoming-call motif with soft echoes and a pause in a four-second cycle. Set AudioPlaybackOptions.Loop to repeat until stopped.</summary>
+    public static readonly NotificationSound TelephoneRing = new(12);
 }

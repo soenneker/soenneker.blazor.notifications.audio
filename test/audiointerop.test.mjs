@@ -29,16 +29,32 @@ globalThis.document = { baseURI: 'https://example.test/app/' };
 
 async function withEngine(action) { const e = new AudioEngine(); try { await action(e); } finally { await e.dispose(); } }
 
-test('all twelve presets synthesize finite, non-silent, peak-limited distinct buffers', () => withEngine(async e => {
+test('all thirteen presets synthesize finite, non-silent, peak-limited distinct buffers', () => withEngine(async e => {
     const fingerprints = new Set();
-    for (let i = 0; i < 12; i++) {
+    for (let i = 0; i < 13; i++) {
         const buffer = await e.buffer('preset', i), data = buffer.getChannelData(0);
         assert.ok(data.every(Number.isFinite));
         const peak = data.reduce((max, v) => Math.max(max, Math.abs(v)), 0);
         assert.ok(peak > .01 && peak <= 1);
         fingerprints.add(`${data.length}:${data[127]}`);
     }
-    assert.equal(fingerprints.size, 12);
+    assert.equal(fingerprints.size, 13);
+}));
+
+test('telephone ring preserves its pause, loops and stops when replaced or answered', () => withEngine(async e => {
+    const buffer = await e.buffer('preset', 12), samples = buffer.getChannelData(0);
+    assert.equal(buffer.duration, 4);
+    for (const start of [0, .24, .78, 1.02])
+        assert.ok(samples.slice(Math.round(start * buffer.sampleRate), Math.round((start + .15) * buffer.sampleRate)).some(v => Math.abs(v) > .04));
+    assert.ok(samples.slice(2 * buffer.sampleRate).every(v => v === 0));
+    await e.play('ring', 'preset', 12, { loop: true, key: 'incoming-call', replaceExisting: true });
+    e.context.currentTime = 9;
+    assert.equal(e.getState('ring').position, 1);
+    await e.play('replacement', 'preset', 12, { loop: true, key: 'incoming-call', replaceExisting: true });
+    assert.equal(e.getState('ring'), null);
+    assert.equal(e.active.get('replacement').source.loop, true);
+    e.stop('replacement');
+    assert.equal(e.getState('replacement'), null);
 }));
 
 test('pause/resume and rate changes preserve source position', () => withEngine(async e => {

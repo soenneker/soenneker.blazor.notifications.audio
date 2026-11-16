@@ -12,7 +12,7 @@ public sealed class AudioEnumValueTests
     [Test]
     public void EnumValuesPreserveTheBrowserWireFormat()
     {
-        if (NotificationSound.List.Count != 12 || AudioWaveform.List.Count != 4)
+        if (NotificationSound.List.Count != 13 || AudioWaveform.List.Count != 4)
             throw new InvalidOperationException("Preset catalog does not match the browser engine.");
         for (int i = 0; i < NotificationSound.List.Count; i++)
             if (NotificationSound.FromValue(i).Value != i)

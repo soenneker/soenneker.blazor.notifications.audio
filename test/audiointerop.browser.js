@@ -8,12 +8,25 @@
     try {
         check(await engine.unlock(), 'Context did not unlock');
         engine.setMasterVolume(0);
-        for (let i = 0; i < 12; i++) {
+        for (let i = 0; i < 13; i++) {
             const buffer = await engine.buffer('preset', i);
             check(buffer instanceof AudioBuffer && buffer.duration > 0, 'Invalid preset buffer');
             await engine.play(`preset-${i}`, 'preset', i);
         }
-        engine.stopAll(); passed.push('12 real AudioBuffer presets');
+        engine.stopAll(); passed.push('13 real AudioBuffer presets');
+        const ring = await engine.buffer('preset', 12);
+        check(ring.duration === 4, 'Telephone ring must include its four-second cadence');
+        const ringSamples = ring.getChannelData(0);
+        const hasSignal = (start, end) => ringSamples.slice(Math.round(start * ring.sampleRate), Math.round(end * ring.sampleRate)).some(value => Math.abs(value) > .01);
+        check(hasSignal(0, .5) && hasSignal(.78, 1.5), 'Telephone ring must contain both note pairs');
+        check(!hasSignal(2, 4), 'Telephone ring must pause between cycles');
+        await engine.play('ring', 'preset', 12, { loop: true, key: 'incoming-call', replaceExisting: true });
+        await engine.play('replacement-ring', 'preset', 12, { loop: true, key: 'incoming-call', replaceExisting: true });
+        check(engine.getState('ring') === null, 'Replacement must stop the previous ring');
+        check(engine.active.get('replacement-ring').source.loop, 'Telephone ring must loop');
+        engine.stop('replacement-ring');
+        check(engine.getState('replacement-ring') === null, 'Answering must stop the ring');
+        passed.push('telephone ring cadence, looping, replacement and stop');
         await engine.play('control', 'preset', 2, { loop: true, volume: .4, pan: -.5, fadeIn: .02 });
         await delay(80);
         check(engine.getState('control').position > 0, 'Audio clock did not advance');

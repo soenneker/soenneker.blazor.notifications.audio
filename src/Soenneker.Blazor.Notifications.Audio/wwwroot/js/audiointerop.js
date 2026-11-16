@@ -13,7 +13,15 @@ const presets = [
     [tone(330, 0, .23, .28, 1), tone(220, .19, .4, .3, 1)], // Error
     [tone(523.25, 0, .5, .22), tone(659.25, 0, .5, .18), tone(783.99, 0, .65, .18), tone(1046.5, .25, .6, .2)], // Complete
     [tone(440, 0, .15), tone(554.37, .1, .15), tone(659.25, .2, .15), tone(880, .3, .3)],
-    [tone(880, 0, .15), tone(659.25, .1, .15), tone(554.37, .2, .15), tone(440, .3, .3)]
+    [tone(880, 0, .15), tone(659.25, .1, .15), tone(554.37, .2, .15), tone(440, .3, .3)],
+    // TelephoneRing: a rounded mallet motif (D-A-E-A), in two answering pairs.
+    // Brief upper partials add definition; the quieter delayed notes give a soft echo.
+    [[587.33, 0], [880, .24], [659.25, .78], [880, 1.02]].flatMap(([frequency, start]) => [
+        { ...tone(frequency, start, .85, .16), attack: .012, release: .83 },
+        { ...tone(frequency / 2, start, .65, .045), attack: .018, release: .63 },
+        { ...tone(frequency * 2, start, .18, .035), attack: .006, release: .17 },
+        { ...tone(frequency, start + .16, .7, .025), attack: .025, release: .67 }
+    ]).concat([tone(440, 2, 2, 0)])
 ];
 
 function number(value, min, max, name) {
