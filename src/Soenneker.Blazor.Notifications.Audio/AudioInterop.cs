@@ -42,7 +42,7 @@ public sealed class AudioInterop : IAudioInterop
     {
         IJSObjectReference module = await _modules.GetContentModuleReference(ModulePath, cancellationToken);
         // Once creation starts, receive its reference even if the caller cancels, so it can always be disposed.
-        _engine = await module.InvokeAsync<IJSObjectReference>("create");
+        _engine = await module.InvokeAsync<IJSObjectReference>("create", new object[] { AudioPresets.CreateAll() });
     }
 
     public async ValueTask Initialize(CancellationToken cancellationToken = default)

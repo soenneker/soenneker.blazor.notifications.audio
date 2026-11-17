@@ -1,4 +1,5 @@
 import test from 'node:test';
+import { presets } from './audioPresets.fixture.mjs';
 import assert from 'node:assert/strict';
 import { AudioEngine } from '../src/Soenneker.Blazor.Notifications.Audio/wwwroot/js/audiointerop.js';
 
@@ -27,7 +28,7 @@ globalThis.removeEventListener = (event, listener) => listeners.delete(listener)
 globalThis.AudioContext = function () { return context(); };
 globalThis.document = { baseURI: 'https://example.test/app/' };
 
-async function withEngine(action) { const e = new AudioEngine(); try { await action(e); } finally { await e.dispose(); } }
+async function withEngine(action) { const e = new AudioEngine(presets); try { await action(e); } finally { await e.dispose(); } }
 
 test('all thirteen presets synthesize finite, non-silent, peak-limited distinct buffers', () => withEngine(async e => {
     const fingerprints = new Set();
@@ -176,7 +177,7 @@ test('locked browser activation fails promptly rather than hanging', () => withE
 }));
 
 test('scopes are isolated and disposal aborts loading, resolves waiters, and removes listeners', async () => {
-    const first = new AudioEngine(), second = new AudioEngine();
+    const first = new AudioEngine(presets), second = new AudioEngine(presets);
     try {
         await first.play('a', 'preset', 0, { loop: true });
         const waiter = first.waitForEnd('a');

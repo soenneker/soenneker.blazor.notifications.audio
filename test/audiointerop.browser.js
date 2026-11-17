@@ -1,7 +1,7 @@
-// Evaluate in the demo page after a user gesture. Uses real browser Web Audio, not test doubles.
+// Evaluate after defining `presets` from audioPresets.fixture.mjs, in the demo page after a user gesture. Uses real browser Web Audio, not test doubles.
 (async () => {
     const { AudioEngine } = await import(`/_content/Soenneker.Blazor.Notifications.Audio/js/audiointerop.js?verify=${Date.now()}`);
-    const engine = new AudioEngine();
+    const engine = new AudioEngine(presets);
     const check = (condition, message) => { if (!condition) throw new Error(message); };
     const delay = ms => new Promise(resolve => setTimeout(resolve, ms));
     const passed = [];

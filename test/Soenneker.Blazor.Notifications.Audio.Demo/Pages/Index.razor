@@ -10,7 +10,7 @@
 
 <main class="audio-demo">
     <h1>Notification audio playground</h1>
-    <p>Preview twelve built-in sounds, bring your own audio, or compose a tone. Initialize once after render, then interact with the page to enable browser audio.</p>
+    <p>Preview thirteen built-in sounds, bring your own audio, or compose a tone. Initialize once after render, then interact with the page to enable browser audio.</p>
     <button @onclick="Enable">Enable audio</button>
     <p role="status" aria-live="polite">@_status</p>
 
@@ -48,6 +48,9 @@
     </section>
 
     <section>
+        <h2>Customize the telephone ring</h2>
+        <label>Pitch multiplier <input type="number" min="0.5" max="2" step="0.1" @bind="_ringPitch" /></label>
+        <button @onclick="PlayCustomRing">Play customized ring</button>
         <h2>Compose a tone</h2>
         <label>Frequency (Hz) <input type="number" min="20" max="20000" @bind="_frequency" /></label>
         <label>Ending frequency (Hz) <input type="number" min="20" max="20000" @bind="_endFrequency" /></label>
@@ -86,6 +89,7 @@
     private double _volume = 0.7, _pan, _rate = 1, _fade, _master = 1, _frequency = 880, _endFrequency = 440, _duration = 0.5, _seek;
     private bool _loop, _muted;
     private int _waveform;
+    private double _ringPitch = 1;
 
     protected override async Task OnAfterRenderAsync(bool firstRender)
     {
@@ -104,6 +108,14 @@
         try { _status = await Audio.Unlock() ? "Audio enabled." : "Interact with the page, then try again."; }
         catch (Exception ex) { _status = ex.Message; }
     }
+    private Task PlayCustomRing() => Run(async () =>
+    {
+        AudioTone[] tones = AudioPresets.Create(NotificationSound.TelephoneRing);
+        foreach (AudioTone tone in tones)
+            tone.Frequency *= _ringPitch;
+        await Audio.RegisterTones("my-telephone", tones);
+        _id = await Audio.PlayRegistered("my-telephone", Settings());
+    });
     private Task Compose() => Run(async () => _id = await Audio.PlayTones(new[] { new AudioTone { Frequency = _frequency, EndFrequency = _endFrequency, Duration = _duration, Waveform = AudioWaveform.FromValue(_waveform) } }, Settings()));
     private Task PlayRegistered() => Run(async () => _id = await Audio.PlayRegistered("custom", Settings()));
     private Task Register() => Run(async () => await Audio.RegisterUrl("custom", _url));
