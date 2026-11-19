@@ -45,8 +45,8 @@
     </ItemGroup>
 
     <ItemGroup>
-        <PackageReference Include="Soenneker.Gen.EnumValues" Version="11.0.67" />
-        <PackageReference Include="Soenneker.Asyncs.Initializers" Version="11.0.142" />
-        <PackageReference Include="Soenneker.Blazor.Utils.ModuleImport" Version="11.0.1946" />
+        <PackageReference Include="Soenneker.Gen.EnumValues" Version="11.0.68" />
+        <PackageReference Include="Soenneker.Asyncs.Initializers" Version="11.0.143" />
+        <PackageReference Include="Soenneker.Blazor.Utils.ModuleImport" Version="11.0.1948" />
     </ItemGroup>
 </Project>
